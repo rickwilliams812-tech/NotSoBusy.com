@@ -55,37 +55,51 @@ export default function Home() {
               Real-time alerts when your favorite restaurants have short waits and happy staff. Dine better — without the crowds.
             </p>
 
-            {/* Waitlist form */}
-            <form id="waitlist" onSubmit={handleSubmit} className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-6">
+            {/* Waitlist form — mobile-first flex stack; grid only at md+ */}
+            <form
+              id="waitlist"
+              onSubmit={handleSubmit}
+              className="mt-6 flex flex-col gap-3 md:grid md:grid-cols-12"
+            >
               <input
                 type="email"
                 required
                 placeholder="you@email.com"
-                className="col-span-3 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-300 bg-white/80 backdrop-blur"
+                className="w-full md:col-span-6 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-300 bg-white"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                inputMode="email"
+                autoComplete="email"
               />
               <input
                 type="text"
                 placeholder="City"
-                className="col-span-2 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white/80 backdrop-blur"
+                className="w-full md:col-span-4 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                autoComplete="address-level2"
               />
               <input
                 type="text"
                 placeholder="ZIP"
-                className="col-span-1 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-amber-300 bg-white/80 backdrop-blur"
+                className="w-full md:col-span-2 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-amber-300 bg-white"
                 value={zip}
                 onChange={(e) => setZip(e.target.value)}
+                inputMode="numeric"
+                autoComplete="postal-code"
               />
+
               <button
                 type="submit"
-                className="col-span-1 rounded-2xl bg-gradient-to-r from-cyan-600 via-fuchsia-600 to-amber-600 px-5 py-3 font-semibold text-white shadow-md hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-shadow duration-300 sm:col-span-6"
+                className="w-full md:col-span-12 rounded-2xl bg-gradient-to-r from-cyan-600 via-fuchsia-600 to-amber-600 px-5 py-3 min-h-[52px] font-semibold text-white shadow-md hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-shadow duration-300 whitespace-nowrap"
               >
                 {subscribed ? "You're on the list! 🎉" : "Join the waitlist"}
               </button>
-              <p className="sm:col-span-6 text-sm text-slate-500">Free for diners. Private by design.</p>
+
+              {/* Helper text—own row so it never overlaps */}
+              <p className="md:col-span-12 text-sm text-slate-500">
+                Free for diners. Private by design.
+              </p>
             </form>
 
             {/* Benefits strip */}
@@ -96,7 +110,7 @@ export default function Home() {
                 {label:"Happy staff", emoji:"🙂"},
                 {label:"Set alerts", emoji:"🔔"},
               ].map(b => (
-                <span key={b.label} className="inline-flex items-center gap-2 rounded-full bg-white/80 backdrop-blur px-3 py-1 shadow-sm border border-slate-200">
+                <span key={b.label} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-sm border border-slate-200">
                   <span>{b.emoji}</span> {b.label}
                 </span>
               ))}
@@ -134,7 +148,7 @@ export default function Home() {
                 Get a text when <span className="font-medium">Taro Sushi</span> drops below a 15-minute wait between 5–8 pm.
               </p>
               <div className="mt-3 flex gap-2">
-                <button className="rounded-xl border border-slate-200 px-4 py-2 bg-white/80 hover:bg-white transition-colors duration-300">Manage</button>
+                <button className="rounded-xl border border-slate-200 px-4 py-2 bg-white hover:bg-white/90 transition-colors duration-300">Manage</button>
                 <button className="rounded-xl bg-gradient-to-r from-cyan-600 to-fuchsia-600 px-4 py-2 text-white shadow-md hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-shadow duration-300">Enable SMS</button>
               </div>
             </div>
