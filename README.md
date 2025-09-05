@@ -1,6 +1,6 @@
-# NotSoBusy.com — MVP Landing (Next.js + Tailwind)
+# NotSoBusy.com — MVP Landing (Next.js + Tailwind, Glow Edition)
 
-A ready-to-deploy landing page for NotSoBusy.com. Deploy in minutes with Vercel.
+A ready-to-deploy landing page for NotSoBusy.com with colorful gradients and subtle glow effects.
 
 ## Quick start
 
