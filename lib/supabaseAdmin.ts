@@ -1,4 +1,4 @@
-import { createClient } from "supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
 // Server-only Supabase client using the SERVICE ROLE KEY.
 // ⚠️ Never expose the service role in the browser. Keep it only in server code and Vercel env vars.
