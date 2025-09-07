@@ -1,7 +1,9 @@
-// app/api/waitlist/route.ts
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin'; // ← alias, see tsconfig note below
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+
+export const runtime = 'nodejs';           // ensure Node runtime
+export const dynamic = 'force-dynamic';    // prevent static optimization/prerender
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -19,7 +21,8 @@ export async function POST(req: NextRequest) {
     const userAgent = req.headers.get('user-agent') || null;
     const referer = req.headers.get('referer') || null;
 
-    const { error } = await supabaseAdmin.from('waitlist').insert([
+    const supabase = getSupabaseAdmin(); // ← create at runtime
+    const { error } = await supabase.from('waitlist').insert([
       {
         email: String(email).trim().toLowerCase(),
         city: city ? String(city).trim() : null,
@@ -31,7 +34,7 @@ export async function POST(req: NextRequest) {
     ]);
 
     if (error) {
-      // Gracefully handle unique-violation (email already signed up)
+      // unique violation -> treat as success
       if ((error as any).code === '23505') {
         return NextResponse.json({ ok: true, note: 'Already subscribed' }, { status: 200 });
       }
@@ -40,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || 'Bad request' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: e?.message ?? 'Bad request' }, { status: 400 });
   }
 }
 
