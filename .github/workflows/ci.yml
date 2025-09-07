@@ -1,0 +1,37 @@
+name: CI - NotSoBusy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install deps (use lockfile)
+        run: npm ci
+      - name: Disable Next telemetry
+        run: npx next telemetry disable
+      - name: Build
+        run: npm run build
+      - name: Commit lockfile updates (if any)
+        run: |
+          if ! git diff --quiet package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "ci: sync package-lock.json (patch SWC bins)"
+            git push
+          fi
