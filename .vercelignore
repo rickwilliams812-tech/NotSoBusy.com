@@ -1,0 +1,2 @@
+# Force Vercel to always install based on our package-lock.json
+node_modules
