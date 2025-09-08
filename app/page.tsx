@@ -1,22 +1,62 @@
+```tsx
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
 
 export default function Home() {
-  const [email, setEmail] = useState("");
-  const [zip, setZip] = useState("");
-  const [city, setCity] = useState("");
+  const [email, setEmail] = useState('');
+  const [zip, setZip] = useState('');
+  const [city, setCity] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    // Helps confirm the page mounted in your browser console
+    console.log('Home page mounted');
+  }, []);
+
+  function isValidEmail(v: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    console.log({ email, zip, city });
-    setSubscribed(true);
+    setError(null);
+
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, city, zip }),
+      });
+
+      const data = await res.json().catch(() => ({} as any));
+      console.log('WAITLIST_CLIENT_RESPONSE', { status: res.status, data });
+
+      if (!res.ok || (data && data.error)) {
+        setError(data?.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
+
+      // Treat duplicate as success too
+      setSubscribed(true);
+    } catch (err: any) {
+      console.error('WAITLIST_CLIENT_NETWORK_ERROR', err);
+      setError(err?.message ?? 'Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(40%_60%_at_20%_10%,#e0f2fe_0%,transparent_50%),radial-gradient(30%_40%_at_90%_20%,#fae8ff_0%,transparent_45%),radial-gradient(30%_40%_at_30%_90%,#fef9c3_0%,transparent_45%)] text-slate-800">
-
       {/* Top ribbon */}
       <div className="bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-amber-500 text-white text-center text-sm py-2 shadow-md drop-shadow-[0_2px_8px_rgba(255,182,255,0.4)]">
         <span className="font-semibold">New:</span> Smart alerts for your favorite spots — free for diners ✨
@@ -46,7 +86,7 @@ export default function Home() {
         <div className="grid items-center gap-10 md:grid-cols-2">
           <div>
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight md:leading-[1.15] pb-3">
-              Go when it’s{" "}
+              Go when it’s{' '}
               <span className="ml-2 inline-block bg-gradient-to-r from-cyan-600 via-fuchsia-600 to-amber-600 bg-clip-text text-transparent drop-shadow-[0_2px_6px_rgba(255,182,255,0.4)]">
                 Not So Busy
               </span>
@@ -55,62 +95,77 @@ export default function Home() {
               Real-time alerts when your favorite restaurants have short waits and happy staff. Dine better — without the crowds.
             </p>
 
-            {/* Waitlist form — mobile-first flex stack; grid only at md+ */}
-            <form
-              id="waitlist"
-              onSubmit={handleSubmit}
-              className="mt-6 flex flex-col gap-3 md:grid md:grid-cols-12"
-            >
-              <input
-                type="email"
-                required
-                placeholder="you@email.com"
-                className="w-full md:col-span-6 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-300 bg-white"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                inputMode="email"
-                autoComplete="email"
-              />
-              <input
-                type="text"
-                placeholder="City"
-                className="w-full md:col-span-4 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                autoComplete="address-level2"
-              />
-              <input
-                type="text"
-                placeholder="ZIP"
-                className="w-full md:col-span-2 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-amber-300 bg-white"
-                value={zip}
-                onChange={(e) => setZip(e.target.value)}
-                inputMode="numeric"
-                autoComplete="postal-code"
-              />
-
-              <button
-                type="submit"
-                className="w-full md:col-span-12 rounded-2xl bg-gradient-to-r from-cyan-600 via-fuchsia-600 to-amber-600 px-5 py-3 min-h-[52px] font-semibold text-white shadow-md hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-shadow duration-300 whitespace-nowrap"
+            {/* Waitlist form */}
+            {!subscribed ? (
+              <form
+                id="waitlist"
+                onSubmit={handleSubmit}
+                className="mt-6 flex flex-col gap-3 md:grid md:grid-cols-12"
               >
-                {subscribed ? "You're on the list! 🎉" : "Join the waitlist"}
-              </button>
+                <input
+                  type="email"
+                  required
+                  placeholder="you@email.com"
+                  className="w-full md:col-span-6 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-300 bg-white"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  inputMode="email"
+                  autoComplete="email"
+                />
+                <input
+                  type="text"
+                  placeholder="City"
+                  className="w-full md:col-span-4 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-fuchsia-300 bg-white"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  autoComplete="address-level2"
+                />
+                <input
+                  type="text"
+                  placeholder="ZIP"
+                  className="w-full md:col-span-2 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-amber-300 bg-white"
+                  value={zip}
+                  onChange={(e) => setZip(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                />
 
-              {/* Helper text—own row so it never overlaps */}
-              <p className="md:col-span-12 text-sm text-slate-500">
-                Free for diners. Private by design.
-              </p>
-            </form>
+                {error && (
+                  <p className="md:col-span-12 text-sm text-red-600" role="alert" aria-live="polite">
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full md:col-span-12 rounded-2xl bg-gradient-to-r from-cyan-600 via-fuchsia-600 to-amber-600 px-5 py-3 min-h-[52px] font-semibold text-white shadow-md hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-shadow duration-300 whitespace-nowrap disabled:opacity-70"
+                >
+                  {loading ? 'Joining…' : 'Join the waitlist'}
+                </button>
+
+                <p className="md:col-span-12 text-sm text-slate-500">
+                  Free for diners. Private by design.
+                </p>
+              </form>
+            ) : (
+              <div className="mt-6 rounded-2xl border border-emerald-200/70 bg-emerald-50 p-4 text-emerald-800 shadow-sm">
+                🎉 You’re on the list! We’ll ping you when your favorites are less busy.
+              </div>
+            )}
 
             {/* Benefits strip */}
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
               {[
-                {label:"No crowds", emoji:"🧑‍🍳"},
-                {label:"Short waits", emoji:"⏱️"},
-                {label:"Happy staff", emoji:"🙂"},
-                {label:"Set alerts", emoji:"🔔"},
-              ].map(b => (
-                <span key={b.label} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-sm border border-slate-200">
+                { label: 'No crowds', emoji: '🧑‍🍳' },
+                { label: 'Short waits', emoji: '⏱️' },
+                { label: 'Happy staff', emoji: '🙂' },
+                { label: 'Set alerts', emoji: '🔔' },
+              ].map((b) => (
+                <span
+                  key={b.label}
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-sm border border-slate-200"
+                >
                   <span>{b.emoji}</span> {b.label}
                 </span>
               ))}
@@ -128,7 +183,7 @@ export default function Home() {
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700">Not so busy</span>
               </div>
               <ul className="mt-4 divide-y divide-slate-200/70">
-                {[{name:"El Jardin", wait:"10–15m", score:92}, {name:"Taro Sushi", wait:"No wait", score:96}, {name:"BBQ Depot", wait:"25–35m", score:68}].map((r) => (
+                {[{ name: 'El Jardin', wait: '10–15m', score: 92 }, { name: 'Taro Sushi', wait: 'No wait', score: 96 }, { name: 'BBQ Depot', wait: '25–35m', score: 68 }].map((r) => (
                   <li key={r.name} className="flex items-center justify-between py-3">
                     <div>
                       <p className="font-medium">{r.name}</p>
@@ -161,9 +216,9 @@ export default function Home() {
         <h2 className="text-2xl font-bold mb-6">How it works</h2>
         <div className="grid gap-8 md:grid-cols-3">
           {[
-            {title:"Pick favorites", body:"Follow restaurants you love and choose your usual time windows.", grad:"from-cyan-50 to-white border-cyan-200/60"},
-            {title:"We watch the crowds", body:"We monitor waitlists, reservations, and historical patterns to estimate busyness.", grad:"from-fuchsia-50 to-white border-fuchsia-200/60"},
-            {title:"You get a ping", body:"When it’s a great moment to go, we alert you — by text, push, or email.", grad:"from-amber-50 to-white border-amber-200/60"},
+            { title: 'Pick favorites', body: 'Follow restaurants you love and choose your usual time windows.', grad: 'from-cyan-50 to-white border-cyan-200/60' },
+            { title: 'We watch the crowds', body: 'We monitor waitlists, reservations, and historical patterns to estimate busyness.', grad: 'from-fuchsia-50 to-white border-fuchsia-200/60' },
+            { title: 'You get a ping', body: 'When it’s a great moment to go, we alert you — by text, push, or email.', grad: 'from-amber-50 to-white border-amber-200/60' },
           ].map((item) => (
             <div key={item.title} className={`rounded-2xl border bg-gradient-to-br ${item.grad} p-6 shadow-sm`}>
               <h4 className="text-lg font-semibold">{item.title}</h4>
@@ -214,3 +269,4 @@ export default function Home() {
     </div>
   );
 }
+```
