@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -11,7 +11,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Helps confirm the page mounted in your browser console
     console.log('Home page mounted');
   }, []);
 
@@ -39,12 +38,12 @@ export default function Home() {
       const data = await res.json().catch(() => ({} as any));
       console.log('WAITLIST_CLIENT_RESPONSE', { status: res.status, data });
 
-      if (!res.ok || (data && (data.error || data.ok === false))) {
-        setError(data?.error ?? 'Something went wrong. Please try again.');
+      if (!res.ok || (data && (data as any).error)) {
+        setError((data as any)?.error ?? 'Something went wrong. Please try again.');
         return;
       }
 
-      // Treat duplicate as success too
+      // Treat success (and duplicate handled by API) as subscribed
       setSubscribed(true);
     } catch (err: any) {
       console.error('WAITLIST_CLIENT_NETWORK_ERROR', err);
@@ -85,7 +84,7 @@ export default function Home() {
         <div className="grid items-center gap-10 md:grid-cols-2">
           <div>
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight md:leading-[1.15] pb-3">
-              Go when it’s{' '}
+              Go when it's{' '}
               <span className="ml-2 inline-block bg-gradient-to-r from-cyan-600 via-fuchsia-600 to-amber-600 bg-clip-text text-transparent drop-shadow-[0_2px_6px_rgba(255,182,255,0.4)]">
                 Not So Busy
               </span>
@@ -149,7 +148,7 @@ export default function Home() {
               </form>
             ) : (
               <div className="mt-6 rounded-2xl border border-emerald-200/70 bg-emerald-50 p-4 text-emerald-800 shadow-sm">
-                🎉 You’re on the list! We’ll ping you when your favorites are less busy.
+                �� You're on the list! We'll ping you when your favorites are less busy.
               </div>
             )}
 
@@ -221,7 +220,7 @@ export default function Home() {
           ].map((item) => (
             <div
               key={item.title}
-              className={'rounded-2xl border bg-gradient-to-br p-6 shadow-sm ' + item.grad}
+              className={"rounded-2xl border bg-gradient-to-br " + item.grad + " p-6 shadow-sm"}
             >
               <h4 className="text-lg font-semibold">{item.title}</h4>
               <p className="mt-2 text-slate-700">{item.body}</p>
