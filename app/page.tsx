@@ -1,7 +1,6 @@
-```tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -40,7 +39,7 @@ export default function Home() {
       const data = await res.json().catch(() => ({} as any));
       console.log('WAITLIST_CLIENT_RESPONSE', { status: res.status, data });
 
-      if (!res.ok || (data && data.error)) {
+      if (!res.ok || (data && (data.error || data.ok === false))) {
         setError(data?.error ?? 'Something went wrong. Please try again.');
         return;
       }
@@ -220,33 +219,14 @@ export default function Home() {
             { title: 'We watch the crowds', body: 'We monitor waitlists, reservations, and historical patterns to estimate busyness.', grad: 'from-fuchsia-50 to-white border-fuchsia-200/60' },
             { title: 'You get a ping', body: 'When it’s a great moment to go, we alert you — by text, push, or email.', grad: 'from-amber-50 to-white border-amber-200/60' },
           ].map((item) => (
-            <div key={item.title} className={`rounded-2xl border bg-gradient-to-br ${item.grad} p-6 shadow-sm`}>
+            <div
+              key={item.title}
+              className={'rounded-2xl border bg-gradient-to-br p-6 shadow-sm ' + item.grad}
+            >
               <h4 className="text-lg font-semibold">{item.title}</h4>
               <p className="mt-2 text-slate-700">{item.body}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Why it helps */}
-      <section id="why" className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="grid gap-8 md:grid-cols-2">
-          <div className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-white to-amber-50 p-6 shadow-sm">
-            <h3 className="text-xl font-semibold">For diners</h3>
-            <ul className="mt-3 list-disc pl-6 text-slate-700">
-              <li>Shorter waits, better service.</li>
-              <li>Privacy-first: location sharing is optional.</li>
-              <li>One tap to navigate or share ETA.</li>
-            </ul>
-          </div>
-          <div className="rounded-2xl border border-emerald-200/60 bg-gradient-to-br from-white to-emerald-50 p-6 shadow-sm">
-            <h3 className="text-xl font-semibold">For restaurants</h3>
-            <ul className="mt-3 list-disc pl-6 text-slate-700">
-              <li>Fill slow periods with loyal guests.</li>
-              <li>Integrates with waitlist & reservation systems.</li>
-              <li>Zero hardware to start.</li>
-            </ul>
-          </div>
         </div>
       </section>
 
@@ -269,4 +249,3 @@ export default function Home() {
     </div>
   );
 }
-```
