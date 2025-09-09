@@ -31,7 +31,13 @@ return /^[^\s@]+@[^\s@]+.[^\s@]+$/.test(v);
 }
 
 function escapeHtml(s: string) {
-return s.replace(/[&<>"']/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[c]!));
+return s.replace(/[&<>"']/g, (c) => ({
+'&': '&',
+'<': '<',
+'>': '>',
+'"': '"',
+"'": ''',
+}[c]!));
 }
 
 function welcomeHtml(toEmail: string) {
@@ -66,6 +72,7 @@ const { data, error } = await supabase
   .single();
 
 if (error) {
+  // Unique violation from Postgres (duplicate email)
   if ((error as any).code === '23505') {
     duplicate = true;
   } else {
@@ -76,6 +83,7 @@ if (error) {
   inserted = data!;
 }
 
+// Send welcome email only for brand-new signups
 if (!duplicate) {
   try {
     const resend = new Resend(RESEND_API_KEY);
@@ -87,6 +95,7 @@ if (!duplicate) {
     });
   } catch (mailErr) {
     console.error('RESEND_SEND_ERROR', mailErr);
+    // We don’t fail the request just because the email didn’t send
   }
 }
 
