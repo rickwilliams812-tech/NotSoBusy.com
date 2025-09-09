@@ -1,70 +1,110 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import WelcomeEmail from '@/emails/WelcomeEmail';
 
-// --- Supabase admin client (server-only)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-// --- Resend client (server-only)
-const resend = new Resend(process.env.RESEND_API_KEY);
+type Body = {
+email?: string;
+city?: string;
+zip?: string;
+};
 
-function isValidEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+const SUPABASE_URL = process.env.SUPABASE_URL ?? '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
+const RESEND_FROM = process.env.RESEND_FROM ?? 'NotSoBusy hello@notsobusy.com
+';
+
+function ensureEnv() {
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+throw new Error('Missing Supabase env vars (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY).');
+}
+if (!RESEND_API_KEY) {
+throw new Error('Missing Resend env var (RESEND_API_KEY).');
+}
 }
 
+function isValidEmail(v: string) {
+return /^[^\s@]+@[^\s@]+.[^\s@]+$/.test(v);
+}
+
+function escapeHtml(s: string) {
+return s.replace(/[&<>"']/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[c]!));
+}
+
+function welcomeHtml(toEmail: string) {
+const safe = escapeHtml(toEmail);
+return <div style="font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5"> <h2>Welcome to NotSoBusy 🎉</h2> <p>Hi ${safe}, thanks for joining the waitlist!</p> <p>You’ll get updates when your favorite spots are <strong>not so busy</strong>, plus early access invites.</p> <p style="margin-top:16px">— Team NotSoBusy</p> </div> ;
+}
+
+// POST /api/waitlist
 export async function POST(req: Request) {
-  try {
-    const { email, city, zip } = await req.json();
+try {
+ensureEnv();
 
-    if (!isValidEmail(email)) {
-      return NextResponse.json({ ok: false, error: 'Invalid email' }, { status: 400 });
-    }
+const { email = '', city = '', zip = '' } = (await req.json().catch(() => ({}))) as Body;
 
-    // Try to insert. Unique index on lower(email) will throw on dupes.
-    const { data: row, error } = await supabase
-      .from('waitlist')
-      .insert({ email, city, zip })
-      .select('id,email,created_at')
-      .single();
+const e = email.trim().toLowerCase();
+const c = city?.trim() || null;
+const z = zip?.trim() || null;
 
-    if (error) {
-      // Postgres duplicate key error
-      if ((error as any).code === '23505') {
-        return NextResponse.json({ ok: true, duplicate: true, message: 'Already subscribed' });
-      }
-      console.error('WAITLIST_INSERT_ERROR', error);
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    }
+if (!isValidEmail(e)) {
+  return NextResponse.json({ ok: false, error: 'Invalid email.' }, { status: 400 });
+}
 
-    // Send welcome email ONLY for brand-new signups
-    const from = process.env.RESEND_FROM || 'NotSoBusy <hello@updates.notsobusy.com>';
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { error: emailError, data: sent } = await resend.emails.send({
-      from,
-      to: email,
-      subject: 'Welcome to NotSoBusy 🎉',
-      react: WelcomeEmail({ email, city }),
-      // (Optional) also include a plain-text fallback:
-      text:
-        `Welcome to NotSoBusy!\n\n` +
-        `Thanks for joining${city ? ` from ${city}` : ''}. ` +
-        `We’ll let you know when your favorite spots are not so busy.\n\n` +
-        `— The NotSoBusy team`,
-    });
+let duplicate = false;
+let inserted: { id: string; email: string; created_at: string } | null = null;
 
-    if (emailError) {
-      console.error('RESEND_SEND_ERROR', emailError);
-      // Don’t fail the whole request if the email fails
-      return NextResponse.json({ ok: true, inserted: row, emailSent: false, emailError: emailError.message });
-    }
+const { data, error } = await supabase
+  .from('waitlist')
+  .insert([{ email: e, city: c, zip: z }])
+  .select('id,email,created_at')
+  .single();
 
-    return NextResponse.json({ ok: true, inserted: row, emailSent: true, emailId: sent?.id });
-  } catch (err: any) {
-    console.error('WAITLIST_POST_FATAL', err);
-    return NextResponse.json({ ok: false, error: err?.message ?? 'Server error' }, { status: 500 });
+if (error) {
+  if ((error as any).code === '23505') {
+    duplicate = true;
+  } else {
+    console.error('WAITLIST_INSERT_ERROR', error);
+    return NextResponse.json({ ok: false, error: 'Database error.' }, { status: 500 });
   }
+} else {
+  inserted = data!;
+}
+
+if (!duplicate) {
+  try {
+    const resend = new Resend(RESEND_API_KEY);
+    await resend.emails.send({
+      from: RESEND_FROM,
+      to: e,
+      subject: 'Welcome to NotSoBusy 🎉',
+      html: welcomeHtml(e),
+    });
+  } catch (mailErr) {
+    console.error('RESEND_SEND_ERROR', mailErr);
+  }
+}
+
+return NextResponse.json({ ok: true, duplicate, inserted });
+
+
+} catch (err: any) {
+console.error('WAITLIST_ROUTE_FATAL', err);
+return NextResponse.json({ ok: false, error: err?.message ?? 'Unexpected error.' }, { status: 500 });
+}
+}
+
+// GET /api/waitlist (health)
+export async function GET() {
+try {
+ensureEnv();
+return NextResponse.json({ ok: true, hasSupabase: true, hasResend: true });
+} catch (e: any) {
+return NextResponse.json({ ok: false, error: e?.message ?? 'Missing envs' }, { status: 500 });
+}
 }
