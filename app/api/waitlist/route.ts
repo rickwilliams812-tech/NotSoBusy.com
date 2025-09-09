@@ -1,58 +1,70 @@
-import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+import WelcomeEmail from '@/emails/WelcomeEmail';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// --- Supabase admin client (server-only)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+// --- Resend client (server-only)
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const { email, city, zip } = await req.json();
-    console.log('WAITLIST_POST_INCOMING', { email, city, zip });
 
-    if (!email || !isValidEmail(email)) {
-      console.error('WAITLIST_INVALID_EMAIL', { email });
+    if (!isValidEmail(email)) {
       return NextResponse.json({ ok: false, error: 'Invalid email' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
-    const zip5 = typeof zip === 'string' ? zip.trim().slice(0, 10) : null;
-    const userAgent = req.headers.get('user-agent') || null;
-    const referer = req.headers.get('referer') || null;
-
-    const { data, error } = await supabase
+    // Try to insert. Unique index on lower(email) will throw on dupes.
+    const { data: row, error } = await supabase
       .from('waitlist')
-      .insert([{
-        email: String(email).trim().toLowerCase(),
-        city: city ? String(city).trim() : null,
-        zip: zip5,
-        source: 'notsobusy.com',
-        user_agent: userAgent,
-        referer,
-      }])
+      .insert({ email, city, zip })
       .select('id,email,created_at')
       .single();
 
     if (error) {
-      console.error('WAITLIST_INSERT_ERROR', { code: (error as any).code, message: error.message });
+      // Postgres duplicate key error
       if ((error as any).code === '23505') {
-        return NextResponse.json({ ok: true, note: 'Already subscribed' }, { status: 200 });
+        return NextResponse.json({ ok: true, duplicate: true, message: 'Already subscribed' });
       }
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+      console.error('WAITLIST_INSERT_ERROR', error);
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
-    console.log('WAITLIST_INSERT_OK', data);
-    return NextResponse.json({ ok: true, inserted: data }, { status: 201 });
-  } catch (e: any) {
-    console.error('WAITLIST_POST_EXCEPTION', e?.message);
-    return NextResponse.json({ ok: false, error: e?.message ?? 'Bad request' }, { status: 400 });
-  }
-}
+    // Send welcome email ONLY for brand-new signups
+    const from = process.env.RESEND_FROM || 'NotSoBusy <hello@updates.notsobusy.com>';
 
-export async function GET() {
-  return NextResponse.json({ ok: false, error: 'Not allowed' }, { status: 405 });
+    const { error: emailError, data: sent } = await resend.emails.send({
+      from,
+      to: email,
+      subject: 'Welcome to NotSoBusy 🎉',
+      react: WelcomeEmail({ email, city }),
+      // (Optional) also include a plain-text fallback:
+      text:
+        `Welcome to NotSoBusy!\n\n` +
+        `Thanks for joining${city ? ` from ${city}` : ''}. ` +
+        `We’ll let you know when your favorite spots are not so busy.\n\n` +
+        `— The NotSoBusy team`,
+    });
+
+    if (emailError) {
+      console.error('RESEND_SEND_ERROR', emailError);
+      // Don’t fail the whole request if the email fails
+      return NextResponse.json({ ok: true, inserted: row, emailSent: false, emailError: emailError.message });
+    }
+
+    return NextResponse.json({ ok: true, inserted: row, emailSent: true, emailId: sent?.id });
+  } catch (err: any) {
+    console.error('WAITLIST_POST_FATAL', err);
+    return NextResponse.json({ ok: false, error: err?.message ?? 'Server error' }, { status: 500 });
+  }
 }
