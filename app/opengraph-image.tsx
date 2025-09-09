@@ -3,9 +3,8 @@ import { ImageResponse } from 'next/og';
 export const runtime = 'edge';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const alt = 'NotSoBusy — Go when it’s Not So Busy';
 
-export default async function Image() {
+export default function Image() {
   return new ImageResponse(
     (
       <div
@@ -47,13 +46,13 @@ export default async function Image() {
         <div style={{ height: 28 }} />
 
         <div style={{ fontSize: 72, fontWeight: 900, lineHeight: 1.1 }}>
-          Go when it’s{' '}
+          Go when it&apos;s{' '}
           <span
             style={{
               backgroundImage:
                 'linear-gradient(90deg, #0891b2, #a21caf, #d97706)',
-              backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
               color: 'transparent',
             }}
           >
