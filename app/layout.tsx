@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 const siteUrl = 'https://www.notsobusy.com';
-const ogImage = `${siteUrl}/og.png?v=5`; // bump the version to bust caches on platforms
+// Add a version query to bust social and CDN caches when you update the image
+const ogImage = `${siteUrl}/og.png?v=7`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
       'Real-time alerts when your favorite restaurants have short waits and happy staff. Dine better — without the crowds.',
     images: [
       {
-        url: ogImage,
+        url: ogImage, // <— force /og.png
         width: 1200,
         height: 630,
         type: 'image/png',
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
     title: 'NotSoBusy — Go when it’s Not So Busy',
     description:
       'Real-time alerts when your favorite restaurants have short waits and happy staff. Dine better — without the crowds.',
-    images: [ogImage],
+    images: [ogImage], // <— force /og.png
   },
   alternates: { canonical: siteUrl },
   robots: { index: true, follow: true },
