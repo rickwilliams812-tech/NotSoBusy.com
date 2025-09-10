@@ -2,51 +2,45 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
+const siteUrl = 'https://www.notsobusy.com';
+const ogImage = `${siteUrl}/og.png?v=5`; // bump the version to bust caches on platforms
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.notsobusy.com'),
-  title: {
-    default: 'NotSoBusy — Go when it’s Not So Busy',
-    template: '%s · NotSoBusy',
-  },
+  metadataBase: new URL(siteUrl),
+  title: 'NotSoBusy — Go when it’s Not So Busy',
   description:
     'Real-time alerts when your favorite restaurants have short waits and happy staff. Dine better — without the crowds.',
   openGraph: {
     type: 'website',
-    url: 'https://www.notsobusy.com',
+    url: siteUrl,
     siteName: 'NotSoBusy',
     title: 'NotSoBusy — Go when it’s Not So Busy',
     description:
       'Real-time alerts when your favorite restaurants have short waits and happy staff. Dine better — without the crowds.',
     images: [
       {
-        url: '/og.png', // <-- static OG image in /public
+        url: ogImage,
         width: 1200,
         height: 630,
-        alt: 'NotSoBusy — Less Busy, Happy Staff, Short Waits',
+        type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@notsobusy', // optional if you have a handle
+    site: '@notsobusy',
     title: 'NotSoBusy — Go when it’s Not So Busy',
     description:
       'Real-time alerts when your favorite restaurants have short waits and happy staff. Dine better — without the crowds.',
-    images: ['/og.png'], // <-- static OG image in /public
+    images: [ogImage],
   },
-  icons: {
-    icon: '/favicon.ico',
-  },
+  alternates: { canonical: siteUrl },
+  robots: { index: true, follow: true },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      {/* No manual <meta> tags needed; Next.js generates them from `metadata` */}
       <body>{children}</body>
     </html>
   );
