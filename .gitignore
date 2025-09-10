@@ -4,3 +4,8 @@ node_modules
 .env
 .env.*
 .DS_Store
+
+.next
+next
+Build
+notsobusy@0.1.0
